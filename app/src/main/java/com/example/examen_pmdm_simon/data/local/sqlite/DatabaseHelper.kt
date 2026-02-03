@@ -1,8 +1,9 @@
-package com.example.examen_pmdm_simon.data
+package com.example.examen_pmdm_simon.data.local.sqlite
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.example.examen_pmdm_simon.data.local.sqlite.PartidasContrato
 
 class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     override fun onCreate(db: SQLiteDatabase) {

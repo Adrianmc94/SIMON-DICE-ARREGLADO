@@ -1,4 +1,4 @@
-package com.example.examen_pmdm_simon.data
+package com.example.examen_pmdm_simon.data.local.room
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

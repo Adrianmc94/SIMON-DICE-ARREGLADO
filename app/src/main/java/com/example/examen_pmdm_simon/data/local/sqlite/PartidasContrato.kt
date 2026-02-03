@@ -1,4 +1,4 @@
-package com.example.examen_pmdm_simon.data
+package com.example.examen_pmdm_simon.data.local.sqlite
 
 import android.provider.BaseColumns
 

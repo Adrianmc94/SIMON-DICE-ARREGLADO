@@ -7,9 +7,12 @@ import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
-// IMPORTANTE: Verifica que estos paquetes coincidan con el nombre de tu proyecto
-import com.example.examen_pmdm_simon.data.* import kotlinx.coroutines.Dispatchers
+import com.example.examen_pmdm_simon.data.*
+import com.example.examen_pmdm_simon.data.local.room.AppDatabase
+import com.example.examen_pmdm_simon.data.local.room.PartidaEntity
+import com.example.examen_pmdm_simon.data.local.sqlite.DatabaseHelper
+import com.example.examen_pmdm_simon.data.local.sqlite.PartidasContrato
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -17,20 +20,16 @@ import java.util.*
 
 class MyViewModel(application: Application) : AndroidViewModel(application) {
 
-    // --- 1. PERSISTENCIA: SHAREDPREFERENCES ---
+    // --- PERSISTENCIA: CONFIGURACIÓN ---
     private val PREFS_NAME = "simon_prefs"
     private val KEY_RECORD = "max_score"
     private val KEY_FECHA = "fecha_score"
     private val sharedPrefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    // --- 2. PERSISTENCIA: SQLITE (Manual) ---
     private val dbHelper = DatabaseHelper(application)
 
-    // --- 3. PERSISTENCIA: ROOM ---
-    private val roomDb = Room.databaseBuilder(
-        application,
-        AppDatabase::class.java, "simon_room_db"
-    ).build()
+    // Inicialización correcta de Room usando o Singleton
+    private val roomDb = AppDatabase.getDatabase(application)
     private val partidaDao = roomDb.partidaDao()
 
     // --- ESTADOS REACTIVOS ---
@@ -44,12 +43,11 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
     private var indiceUsuario = 0
 
     init {
-        // Cargar récord inicial de SharedPreferences
+        // Carga inicial do récord dende SharedPreferences
         recordEnMemoria = sharedPrefs.getInt(KEY_RECORD, 0)
         fechaRecord = sharedPrefs.getString(KEY_FECHA, "N/A") ?: "N/A"
     }
 
-    // --- LÓGICA DEL JUEGO ---
     fun iniciarJuego() {
         secuenciaSimon.clear()
         ronda = 0
@@ -83,7 +81,6 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         if (colorPulsado == secuenciaSimon[indiceUsuario]) {
             indiceUsuario++
             if (indiceUsuario == secuenciaSimon.size) {
-                // Si el usuario acierta toda la secuencia, comprobamos récord
                 if (ronda > recordEnMemoria) {
                     actualizarRecordYFecha()
                 }
@@ -91,11 +88,10 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
             }
         } else {
             estadoActual = EstadoJuego.GAME_OVER
-            guardarEnBasesDeDatos() // Al perder, guardamos en SQLite y Room
+            guardarEnBasesDeDatos()
         }
     }
 
-    // --- GESTIÓN DE SHAREDPREFERENCES ---
     private fun actualizarRecordYFecha() {
         val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
         recordEnMemoria = ronda
@@ -108,36 +104,37 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         Log.d("SIMON_CHECK", "SharedPreferences: Récord actualizado")
     }
 
-    // --- GESTIÓN DE SQLITE Y ROOM ---
     private fun guardarEnBasesDeDatos() {
         val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
 
-        // 1. Guardar en SQLite Manual
-        try {
-            val db = dbHelper.writableDatabase
-            val values = ContentValues().apply {
-                put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, "User_SQLite")
-                put(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION, ronda)
-                put(PartidasContrato.PartidaEntry.COLUMN_FECHA, fechaActual)
+        // 1. SQLite Manual
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val db = dbHelper.writableDatabase
+                val values = ContentValues().apply {
+                    put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, "Xogador_SQLite")
+                    put(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION, ronda)
+                    put(PartidasContrato.PartidaEntry.COLUMN_FECHA, fechaActual)
+                }
+                db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
+                Log.d("SIMON_CHECK", "SQLite: Gardado correctamente en galego")
+            } catch (e: Exception) {
+                Log.e("SIMON_ERROR", "Erro en SQLite: ${e.message}")
             }
-            db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
-            Log.d("SIMON_CHECK", "SQLite: Guardado correctamente")
-        } catch (e: Exception) {
-            Log.e("SIMON_ERROR", "Error en SQLite: ${e.message}")
         }
 
-        // 2. Guardar en Room (Usando Corrutinas en hilo IO)
+        // 2. Room (Seguindo as mellores prácticas con Corrutinas)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val partidaRoom = PartidaEntity(
-                    nombre = "User_Room",
+                    nombre = "Xogador_Room",
                     puntos = ronda,
                     fecha = fechaActual
                 )
                 partidaDao.insertar(partidaRoom)
-                Log.d("SIMON_CHECK", "Room: Guardado correctamente")
+                Log.d("SIMON_CHECK", "Room: Gardado correctamente en galego")
             } catch (e: Exception) {
-                Log.e("SIMON_ERROR", "Error en Room: ${e.message}")
+                Log.e("SIMON_ERROR", "Erro en Room: ${e.message}")
             }
         }
     }

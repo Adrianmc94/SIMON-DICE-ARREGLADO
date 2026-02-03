@@ -1,6 +1,7 @@
-package com.example.examen_pmdm_simon.data
+package com.example.examen_pmdm_simon.data.local.room
 
 import androidx.room.*
+import com.example.examen_pmdm_simon.data.local.room.PartidaEntity
 
 @Dao
 interface PartidaDao {

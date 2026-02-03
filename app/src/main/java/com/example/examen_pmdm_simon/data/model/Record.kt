@@ -1,4 +1,4 @@
-package com.example.examen_pmdm.data.model
+package com.example.examen_pmdm_simon.data.model
 
 data class Record(
     val usuario: String = "Player1",
