@@ -11,7 +11,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Obtenemos el ViewModel
         val simonViewModel: MyViewModel by viewModels()
 
         setContent {

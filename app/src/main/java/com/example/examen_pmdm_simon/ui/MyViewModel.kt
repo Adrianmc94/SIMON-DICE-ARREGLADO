@@ -1,22 +1,39 @@
 package com.example.examen_pmdm_simon.ui
 
+import android.app.Application
+import android.content.Context
 import androidx.compose.runtime.*
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.examen_pmdm_simon.data.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
-class MyViewModel : ViewModel() {
+class MyViewModel(application: Application) : AndroidViewModel(application) {
 
-    // ESTADOS REACTIVOS (La UI se repinta sola cuando cambian)
+    // --- CONFIGURACIÓN SHAREDPREFERENCES ---
+    private val PREFS_NAME = "simon_prefs"
+    private val KEY_RECORD = "max_score"
+    private val KEY_FECHA = "fecha_score"
+    private val sharedPrefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // --- ESTADOS REACTIVOS ---
     var ronda by mutableStateOf(0)
     var recordEnMemoria by mutableStateOf(0)
+    var fechaRecord by mutableStateOf("-")
     var estadoActual by mutableStateOf(EstadoJuego.INICIO)
     var colorIluminado by mutableStateOf<Colores?>(null)
 
     private val secuenciaSimon = mutableListOf<Colores>()
     private var indiceUsuario = 0
+
+    init {
+        // Cargar datos al iniciar la App
+        recordEnMemoria = sharedPrefs.getInt(KEY_RECORD, 0)
+        fechaRecord = sharedPrefs.getString(KEY_FECHA, "N/A") ?: "N/A"
+    }
 
     fun iniciarJuego() {
         secuenciaSimon.clear()
@@ -34,7 +51,7 @@ class MyViewModel : ViewModel() {
     private fun reproducirSecuencia() {
         viewModelScope.launch {
             estadoActual = EstadoJuego.REPRODUCIENDO
-            delay(500) // Pausa antes de empezar
+            delay(500)
             for (color in secuenciaSimon) {
                 colorIluminado = color
                 delay(Constantes.VELOCIDAD_MUESTRA)
@@ -49,22 +66,32 @@ class MyViewModel : ViewModel() {
         if (estadoActual != EstadoJuego.ESPERANDO) return
 
         if (colorPulsado == secuenciaSimon[indiceUsuario]) {
-            // Acierto
             indiceUsuario++
             if (indiceUsuario == secuenciaSimon.size) {
-                // Ha completado toda la secuencia
-                actualizarRecord()
+                // Si sobrepasa el récord mientras juega, lo actualizamos
+                if (ronda > recordEnMemoria) {
+                    actualizarPersistencia()
+                }
                 siguienteRonda()
             }
         } else {
-            // Error
             estadoActual = EstadoJuego.GAME_OVER
         }
     }
 
-    private fun actualizarRecord() {
-        if (ronda > recordEnMemoria) {
-            recordEnMemoria = ronda
+    private fun actualizarPersistencia() {
+        recordEnMemoria = ronda
+
+        // Obtener fecha actual formateada
+        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val fechaActual = sdf.format(Date())
+        fechaRecord = fechaActual
+
+        // Guardar físicamente
+        with(sharedPrefs.edit()) {
+            putInt(KEY_RECORD, recordEnMemoria)
+            putString(KEY_FECHA, fechaActual)
+            apply() // Importante: asíncrono
         }
     }
 }
