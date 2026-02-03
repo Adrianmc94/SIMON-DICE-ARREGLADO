@@ -2,7 +2,7 @@
 # SOLO CAMBIA EN EL ROOM, EL RESTO DE RAMAS IGUAL
 
 
-# KTS MASTER:
+# KTS MASTER, SHARED Y SQLOTE:
 
 plugins {
     alias(libs.plugins.android.application)
@@ -68,7 +68,7 @@ dependencies {
 
 
 
-KTS ROOM:
+# KTS ROOM:
 
 
 plugins {
