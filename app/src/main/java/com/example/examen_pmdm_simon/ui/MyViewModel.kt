@@ -109,57 +109,64 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         // SQLite: Guardamos SIEMPRE la partida en el historial
         insertarPartidaEnSQLite("Jugador_Examen", ronda, fechaActual)
     }
+
+
+    // --- OPERACIONES SQLITE
+
+
     // Operación: INSERT
+    // "Varios records". Se guarda cada partida terminada.
     private fun insertarPartidaEnSQLite(nombre: String, puntos: Int, fecha: String) {
-        val db = dbHelper.writableDatabase
+        val db = dbHelper.writableDatabase // Abrir en modo escritura
+
+        // ContentValues empaqueta los datos para la fila
         val values = ContentValues().apply {
             put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, nombre)
             put(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION, puntos)
             put(PartidasContrato.PartidaEntry.COLUMN_FECHA, fecha)
         }
-        val newRowId = db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
-        Log.d("SQLITE", "Partida insertada en historial. ID: $newRowId")
 
-        // Leemos después de insertar para comprobar en Logcat
-        leerPartidasDeSQLite()
+        // db.insert devuelve el ID de la nueva fila (o -1 si hay error)
+        val newRowId = db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
+        Log.d("SQLITE", "Partida insertada. ID: $newRowId")
     }
 
-    // Operación: SELECT
+    // SELECT: "getAll" y "getMax".
     fun leerPartidasDeSQLite() {
-        val db = dbHelper.readableDatabase
+        val db = dbHelper.readableDatabase // Abrir en modo lectura
+
+        // Consultamos la tabla. El último parámetro es ORDER BY.
         val cursor = db.query(
             PartidasContrato.PartidaEntry.TABLE_NAME,
             null, null, null, null, null,
-            "${PartidasContrato.PartidaEntry.COLUMN_PUNTUACION} DESC" // Ordenar por nota
+            "${PartidasContrato.PartidaEntry.COLUMN_PUNTUACION} DESC" // Ordenar por puntuación mayor
         )
 
-        Log.d("SQLITE", "--- HISTORIAL DE PARTIDAS ---")
+        Log.d("SQLITE", "--- HISTORIAL ---")
         with(cursor) {
             while (moveToNext()) {
+                // Extraer datos usando los nombres de las columnas del Contrato
                 val nombre = getString(getColumnIndexOrThrow(PartidasContrato.PartidaEntry.COLUMN_NOMBRE))
                 val puntos = getInt(getColumnIndexOrThrow(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION))
-                val fecha = getString(getColumnIndexOrThrow(PartidasContrato.PartidaEntry.COLUMN_FECHA))
-                Log.d("SQLITE", "Jugador: $nombre | Puntos: $puntos | Fecha: $fecha")
+                Log.d("SQLITE", "Jugador: $nombre | Puntos: $puntos")
             }
         }
-        cursor.close()
+        cursor.close() // IMPORTANTE: Siempre cerrar el cursor para liberar memoria.
     }
 
-    // Operación: UPDATE
+    // UPDATE: "Actualizar". Ejemplo de cambiar el nombre del jugador.
     fun actualizarNombreUltimaPartida(nuevoNombre: String) {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
             put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, nuevoNombre)
         }
-        // Actualiza todas las partidas de "Jugador_Examen"
+        // Cláusula WHERE: "Actualizar donde nombre sea Jugador_Examen"
         db.update(PartidasContrato.PartidaEntry.TABLE_NAME, values, "nombre = ?", arrayOf("Jugador_Examen"))
     }
 
-    // Operación: DELETE (Borrar todo el historial)
+    // DELETE: "Borrar historial".
     fun borrarHistorialSQLite() {
         val db = dbHelper.writableDatabase
-        // Borra todas las filas de la tabla
-        val filasBorradas = db.delete(PartidasContrato.PartidaEntry.TABLE_NAME, null, null)
-        Log.d("SQLITE", "Se han borrado $filasBorradas partidas del historial.")
+        db.delete(PartidasContrato.PartidaEntry.TABLE_NAME, null, null)
     }
 }
