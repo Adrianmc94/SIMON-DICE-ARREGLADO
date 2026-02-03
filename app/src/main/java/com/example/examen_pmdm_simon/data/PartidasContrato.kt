@@ -1,16 +1,16 @@
-package com.example.examen_pmdm_simon.data
+package com.example.examen_pmdm_simon.data.local.sqlite
 
 import android.provider.BaseColumns
 
-// EXAMEN: Define "Columnas y tablas".
 object PartidasContrato {
     object PartidaEntry : BaseColumns {
-        // Nombre de la tabla física en el archivo .db
         const val TABLE_NAME = "historial"
-
-        // Definición de las columnas
         const val COLUMN_NOMBRE = "nombre"
         const val COLUMN_PUNTUACION = "puntuacion"
         const val COLUMN_FECHA = "fecha"
+
+        /** * EXAMEN: Ejemplo de cómo añadir una columna extra si lo piden
+         * const val COLUMN_NIVEL = "nivel"
+         */
     }
 }
