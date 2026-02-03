@@ -9,21 +9,24 @@ import kotlinx.coroutines.launch
 
 class MyViewModel : ViewModel() {
 
-    // ESTADOS REACTIVOS (La UI se repinta sola cuando cambian)
+    // ESTADOS REACTIVOS: Compose "observa" estas variables. Si cambian, la UI se repinta sola.
     var ronda by mutableStateOf(0)
-    var recordEnMemoria by mutableStateOf(0)
+    var recordEnMemoria by mutableStateOf(0) // Se inicializará con SharedPreferences
     var estadoActual by mutableStateOf(EstadoJuego.INICIO)
     var colorIluminado by mutableStateOf<Colores?>(null)
 
+    // Lógica interna: no visible para la Interfaz (UI).
     private val secuenciaSimon = mutableListOf<Colores>()
     private var indiceUsuario = 0
 
+    // INICIAR: Resetea la partida.
     fun iniciarJuego() {
         secuenciaSimon.clear()
         ronda = 0
         siguienteRonda()
     }
 
+    // PASO DE RONDA: Incrementa dificultad y genera color aleatorio.
     private fun siguienteRonda() {
         indiceUsuario = 0
         ronda++
@@ -31,33 +34,35 @@ class MyViewModel : ViewModel() {
         reproducirSecuencia()
     }
 
+    // CORRUTINA DE MUESTRA: Ilumina los botones uno a uno.
+    // IMPORTANTE: Se usa viewModelScope para que el proceso sea asíncrono.
     private fun reproducirSecuencia() {
         viewModelScope.launch {
             estadoActual = EstadoJuego.REPRODUCIENDO
-            delay(500) // Pausa antes de empezar
+            delay(500)
             for (color in secuenciaSimon) {
-                colorIluminado = color
+                colorIluminado = color // Ilumina botón
                 delay(Constantes.VELOCIDAD_MUESTRA)
-                colorIluminado = null
+                colorIluminado = null  // Apaga botón
                 delay(Constantes.PAUSA_ENTRE_COLORES)
             }
-            estadoActual = EstadoJuego.ESPERANDO
+            estadoActual = EstadoJuego.ESPERANDO // Devuelve el control al usuario
         }
     }
 
+    // RESPUESTA USUARIO: Compara lo pulsado con la secuencia guardada.
     fun respuestaUsuario(colorPulsado: Colores) {
+        // Bloqueo de seguridad: si no es el turno del usuario, ignoramos el click.
         if (estadoActual != EstadoJuego.ESPERANDO) return
 
         if (colorPulsado == secuenciaSimon[indiceUsuario]) {
-            // Acierto
             indiceUsuario++
             if (indiceUsuario == secuenciaSimon.size) {
-                // Ha completado toda la secuencia
                 actualizarRecord()
                 siguienteRonda()
             }
         } else {
-            // Error
+            // el guardado en SharedPreferences, SQLite y Room.
             estadoActual = EstadoJuego.GAME_OVER
         }
     }

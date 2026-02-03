@@ -2,7 +2,7 @@ package com.example.examen_pmdm_simon.data
 
 import androidx.compose.ui.graphics.Color
 
-// Los colores del Simon con su valor visual asociado
+// ENUM DE COLORES: Asocia el nombre del color con su valor visual de Compose.
 enum class Colores(val colorReal: Color) {
     VERDE(Color.Green),
     ROJO(Color.Red),
@@ -10,15 +10,19 @@ enum class Colores(val colorReal: Color) {
     AZUL(Color.Blue)
 }
 
-// Para saber qué está pasando en la app en todo momento
+// ESTADOS DEL JUEGO: Controlan el flujo de la aplicación (MVVM).
+// INICIO: Antes de empezar. GENERANDO: Simón crea la secuencia.
+// REPRODUCIENDO: Se muestra la secuencia (bloquear botones en la UI aquí).
+// ESPERANDO: Turno del jugador. GAME_OVER: Fin del juego (punto clave para guardar datos).
 enum class EstadoJuego {
-    INICIO,          // Pantalla de bienvenida
-    GENERANDO,       // Simon está pensando el siguiente color
-    REPRODUCIENDO,   // Los botones brillan en orden
-    ESPERANDO,       // Turno del jugador
-    GAME_OVER        // El jugador se ha equivocado
+    INICIO,
+    GENERANDO,
+    REPRODUCIENDO,
+    ESPERANDO,
+    GAME_OVER
 }
 
+// CONSTANTES: Centraliza los tiempos para cambiarlos rápido (Dificultad).
 object Constantes {
     const val VELOCIDAD_MUESTRA = 600L
     const val PAUSA_ENTRE_COLORES = 200L
