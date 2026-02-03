@@ -123,7 +123,7 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // 2. Room (Seguindo as mellores prácticas con Corrutinas)
+        // Room (Seguindo as mellores prácticas con Corrutinas)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val partidaRoom = PartidaEntity(
