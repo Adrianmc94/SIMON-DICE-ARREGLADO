@@ -154,4 +154,12 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         // Actualiza todas las partidas de "Jugador_Examen"
         db.update(PartidasContrato.PartidaEntry.TABLE_NAME, values, "nombre = ?", arrayOf("Jugador_Examen"))
     }
+
+    // Operación: DELETE (Borrar todo el historial)
+    fun borrarHistorialSQLite() {
+        val db = dbHelper.writableDatabase
+        // Borra todas las filas de la tabla
+        val filasBorradas = db.delete(PartidasContrato.PartidaEntry.TABLE_NAME, null, null)
+        Log.d("SQLITE", "Se han borrado $filasBorradas partidas del historial.")
+    }
 }
