@@ -14,6 +14,7 @@ import java.util.*
 class MyViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- CONFIGURACIÓN SHAREDPREFERENCES ---
+    // RUTA: /data/data/com.example.examen_pmdm_simon/shared_prefs/simon_prefs.xml
     private val PREFS_NAME = "simon_prefs"
     private val KEY_RECORD = "max_score"
     private val KEY_FECHA = "fecha_score"
@@ -30,7 +31,7 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
     private var indiceUsuario = 0
 
     init {
-        // Cargar datos al iniciar la App
+        // CARGAR: Se ejecuta al iniciar la App para recuperar el récord previo.
         recordEnMemoria = sharedPrefs.getInt(KEY_RECORD, 0)
         fechaRecord = sharedPrefs.getString(KEY_FECHA, "N/A") ?: "N/A"
     }
@@ -61,14 +62,13 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
             estadoActual = EstadoJuego.ESPERANDO
         }
     }
-
     fun respuestaUsuario(colorPulsado: Colores) {
         if (estadoActual != EstadoJuego.ESPERANDO) return
 
         if (colorPulsado == secuenciaSimon[indiceUsuario]) {
             indiceUsuario++
             if (indiceUsuario == secuenciaSimon.size) {
-                // Si sobrepasa el récord mientras juega, lo actualizamos
+                // ACTUALIZACIÓN EN TIEMPO REAL: Si supera el récord mientras juega.
                 if (ronda > recordEnMemoria) {
                     actualizarPersistencia()
                 }
@@ -79,19 +79,19 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ACTUALIZAR/CREAR: Guarda físicamente los datos en el XML.
     private fun actualizarPersistencia() {
         recordEnMemoria = ronda
 
-        // Obtener fecha actual formateada
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
         val fechaActual = sdf.format(Date())
         fechaRecord = fechaActual
 
-        // Guardar físicamente
+        // GUARDADO FÍSICO: Se abre el editor, se ponen los datos y se aplica.
         with(sharedPrefs.edit()) {
-            putInt(KEY_RECORD, recordEnMemoria)
-            putString(KEY_FECHA, fechaActual)
-            apply() // Importante: asíncrono
+            putInt(KEY_RECORD, recordEnMemoria) // Crea o actualiza el entero
+            putString(KEY_FECHA, fechaActual)    // Crea o actualiza el String
+            apply()
         }
     }
 }
