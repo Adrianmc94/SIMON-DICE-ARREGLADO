@@ -18,13 +18,13 @@ fun PantallaSimon(viewModel: MyViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Cabecera de Récords
         Card(
             modifier = Modifier.padding(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.LightGray.copy(alpha = 0.2f))
         ) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(text = "TOP SCORE: ${viewModel.recordEnMemoria}", fontSize = 22.sp, color = Color.Black)
+                Text(text = "Jugador: ${viewModel.nombreJugadorRecord}", fontSize = 16.sp, color = Color.DarkGray)
                 Text(text = "Fecha: ${viewModel.fechaRecord}", fontSize = 12.sp, color = Color.Gray)
             }
         }
@@ -33,7 +33,6 @@ fun PantallaSimon(viewModel: MyViewModel) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Botones de colores
         Column {
             Row {
                 BotonColor(Colores.VERDE, viewModel)
@@ -47,7 +46,6 @@ fun PantallaSimon(viewModel: MyViewModel) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Estados y controles
         if (viewModel.estadoActual == EstadoJuego.GAME_OVER) {
             Text(text = "¡GAME OVER!", color = Color.Red, fontSize = 24.sp)
         }

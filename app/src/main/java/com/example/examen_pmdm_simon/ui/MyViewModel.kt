@@ -20,22 +20,23 @@ import java.util.*
 
 class MyViewModel(application: Application) : AndroidViewModel(application) {
 
-    // --- PERSISTENCIA: CONFIGURACIÓN ---
     private val PREFS_NAME = "simon_prefs"
     private val KEY_RECORD = "max_score"
     private val KEY_FECHA = "fecha_score"
+    private val KEY_NOMBRE = "nombre_record"
     private val sharedPrefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val dbHelper = DatabaseHelper(application)
-
-    // Inicialización correcta de Room usando o Singleton
     private val roomDb = AppDatabase.getDatabase(application)
     private val partidaDao = roomDb.partidaDao()
 
-    // --- ESTADOS REACTIVOS ---
+    // Variable para cambiar el nombre del jugador manualmente antes de arrancar la app
+    private val nombreActualSesion = "rompeEsquemas3000"
+
     var ronda by mutableStateOf(0)
     var recordEnMemoria by mutableStateOf(0)
     var fechaRecord by mutableStateOf("-")
+    var nombreJugadorRecord by mutableStateOf("-")
     var estadoActual by mutableStateOf(EstadoJuego.INICIO)
     var colorIluminado by mutableStateOf<Colores?>(null)
 
@@ -43,9 +44,9 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
     private var indiceUsuario = 0
 
     init {
-        // Carga inicial do récord dende SharedPreferences
         recordEnMemoria = sharedPrefs.getInt(KEY_RECORD, 0)
         fechaRecord = sharedPrefs.getString(KEY_FECHA, "N/A") ?: "N/A"
+        nombreJugadorRecord = sharedPrefs.getString(KEY_NOMBRE, "N/A") ?: "N/A"
     }
 
     fun iniciarJuego() {
@@ -75,66 +76,37 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun respuestaUsuario(colorPulsado: Colores) {
-        if (estadoActual != EstadoJuego.ESPERANDO) return
 
-        if (colorPulsado == secuenciaSimon[indiceUsuario]) {
-            indiceUsuario++
-            if (indiceUsuario == secuenciaSimon.size) {
-                if (ronda > recordEnMemoria) {
-                    actualizarRecordYFecha()
-                }
-                siguienteRonda()
-            }
-        } else {
-            estadoActual = EstadoJuego.GAME_OVER
-            guardarEnBasesDeDatos()
-        }
-    }
-
-    private fun actualizarRecordYFecha() {
-        val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-        recordEnMemoria = ronda
-        fechaRecord = fechaActual
-
-        sharedPrefs.edit()
-            .putInt(KEY_RECORD, recordEnMemoria)
-            .putString(KEY_FECHA, fechaRecord)
-            .apply()
-        Log.d("SIMON_CHECK", "SharedPreferences: Récord actualizado")
-    }
 
     private fun guardarEnBasesDeDatos() {
         val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
 
-        // 1. SQLite Manual
+        // SQLite
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val db = dbHelper.writableDatabase
                 val values = ContentValues().apply {
-                    put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, "Xogador_SQLite")
+                    put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, nombreActualSesion)
                     put(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION, ronda)
                     put(PartidasContrato.PartidaEntry.COLUMN_FECHA, fechaActual)
                 }
                 db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
-                Log.d("SIMON_CHECK", "SQLite: Gardado correctamente en galego")
             } catch (e: Exception) {
-                Log.e("SIMON_ERROR", "Erro en SQLite: ${e.message}")
+                Log.e("SIMON_ERROR", "Error SQLite: ${e.message}")
             }
         }
 
-        // Room (Seguindo as mellores prácticas con Corrutinas)
+        // Room
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val partidaRoom = PartidaEntity(
-                    nombre = "Xogador_Room",
+                    nombre = nombreActualSesion,
                     puntos = ronda,
                     fecha = fechaActual
                 )
                 partidaDao.insertar(partidaRoom)
-                Log.d("SIMON_CHECK", "Room: Gardado correctamente en galego")
             } catch (e: Exception) {
-                Log.e("SIMON_ERROR", "Erro en Room: ${e.message}")
+                Log.e("SIMON_ERROR", "Error Room: ${e.message}")
             }
         }
     }
