@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 class MyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val PREFS_NAME = "simon_prefs"
@@ -76,7 +77,37 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun respuestaUsuario(colorPulsado: Colores) {
+        if (estadoActual != EstadoJuego.ESPERANDO) return
 
+        if (colorPulsado == secuenciaSimon[indiceUsuario]) {
+            indiceUsuario++
+            if (indiceUsuario == secuenciaSimon.size) {
+                if (ronda > recordEnMemoria) {
+                    actualizarRecordYFecha()
+                }
+                siguienteRonda()
+            }
+        } else {
+            estadoActual = EstadoJuego.GAME_OVER
+            guardarEnBasesDeDatos()
+        }
+    }
+
+    private fun actualizarRecordYFecha() {
+        val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+        recordEnMemoria = ronda
+        fechaRecord = fechaActual
+        nombreJugadorRecord = nombreActualSesion
+
+        sharedPrefs.edit()
+            .putInt(KEY_RECORD, recordEnMemoria)
+            .putString(KEY_FECHA, fechaRecord)
+            .putString(KEY_NOMBRE, nombreJugadorRecord)
+            .apply()
+
+        Log.d("ROOM-EXAMEN", "Nuevo record: $nombreJugadorRecord, tienes $recordEnMemoria puntos!!!!!!!!!!!!!")
+    }
 
     private fun guardarEnBasesDeDatos() {
         val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
@@ -105,6 +136,7 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
                     fecha = fechaActual
                 )
                 partidaDao.insertar(partidaRoom)
+                Log.d("ROOM-EXAMEN", "Partida guardada en Room: $partidaRoom")
             } catch (e: Exception) {
                 Log.e("SIMON_ERROR", "Error Room: ${e.message}")
             }
