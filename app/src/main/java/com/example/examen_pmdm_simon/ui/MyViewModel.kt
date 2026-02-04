@@ -18,20 +18,14 @@ import java.util.*
 
 class MyViewModel(application: Application) : AndroidViewModel(application) {
 
-    // --- 1. CONFIGURACIÓN SHAREDPREFERENCES ---
     private val PREFS_NAME = "simon_prefs"
     private val KEY_RECORD = "max_score"
-    private val KEY_FECHA = "fecha_score"
     private val sharedPrefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    // --- 2. CONFIGURACIÓN SQLITE (CONTROLADOR) ---
-    /** * EXAMEN: CONTROLADOR */
     private val dbHelper = DatabaseHelper(application)
 
-    // --- ESTADOS REACTIVOS ---
+    var recordMaximoSQLite by mutableStateOf(0)
     var ronda by mutableStateOf(0)
     var recordEnMemoria by mutableStateOf(0)
-    var fechaRecord by mutableStateOf("-")
     var estadoActual by mutableStateOf(EstadoJuego.INICIO)
     var colorIluminado by mutableStateOf<Colores?>(null)
 
@@ -39,12 +33,21 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
     private var indiceUsuario = 0
 
     init {
-        // CARGAR: Recupera récord de SharedPreferences al iniciar
         recordEnMemoria = sharedPrefs.getInt(KEY_RECORD, 0)
-        fechaRecord = sharedPrefs.getString(KEY_FECHA, "N/A") ?: "N/A"
+        actualizarRecordMaximoDesdeBD()
     }
 
-    // --- LÓGICA DEL JUEGO ---
+    private fun actualizarRecordMaximoDesdeBD() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery("SELECT MAX(${PartidasContrato.PartidaEntry.COLUMN_PUNTUACION}) FROM ${PartidasContrato.PartidaEntry.TABLE_NAME}", null)
+            if (cursor.moveToFirst()) {
+                recordMaximoSQLite = cursor.getInt(0)
+            }
+            cursor.close()
+        }
+    }
+
     fun iniciarJuego() {
         secuenciaSimon.clear()
         ronda = 0
@@ -74,116 +77,59 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun respuestaUsuario(colorPulsado: Colores) {
         if (estadoActual != EstadoJuego.ESPERANDO) return
-
         if (colorPulsado == secuenciaSimon[indiceUsuario]) {
             indiceUsuario++
             if (indiceUsuario == secuenciaSimon.size) {
                 if (ronda > recordEnMemoria) {
-                    actualizarPersistencia()
+                    recordEnMemoria = ronda
+                    sharedPrefs.edit().putInt(KEY_RECORD, recordEnMemoria).apply()
                 }
                 siguienteRonda()
             }
         } else {
             estadoActual = EstadoJuego.GAME_OVER
-
-            // --- IMPLEMENTACIÓN EN EL CONTROLADOR (Acciones al morir) ---
-            guardarTopTresShared(ronda)
-            insertarEnSQLite(ronda)
-            getAllPartidas() // Ver historial en Logcat
+            guardarEnSQLite()
         }
     }
 
-    private fun actualizarPersistencia() {
-        recordEnMemoria = ronda
-        val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-        fechaRecord = fechaActual
-
-        with(sharedPrefs.edit()) {
-            putInt(KEY_RECORD, recordEnMemoria)
-            putString(KEY_FECHA, fechaActual)
-            apply()
-        }
-    }
-
-    // --- BLOQUE SHAREDPREFERENCES ---
-    private fun guardarTopTresShared(puntos: Int) {
-        val r1 = sharedPrefs.getInt("top1", 0)
-        val r2 = sharedPrefs.getInt("top2", 0)
-        val r3 = sharedPrefs.getInt("top3", 0)
-        val editor = sharedPrefs.edit()
-
-        if (puntos > r1) {
-            editor.putInt("top1", puntos); editor.putInt("top2", r1); editor.putInt("top3", r2)
-        } else if (puntos > r2) {
-            editor.putInt("top2", puntos); editor.putInt("top3", r2)
-        } else if (puntos > r3) {
-            editor.putInt("top3", puntos)
-        }
-
-        // Variable "ruta" solicitada
-        editor.putString("ruta", "data/data/com.example/shared_prefs")
-        editor.apply()
-        Log.d("EXAMEN", "Variable ruta: ${sharedPrefs.getString("ruta", "error")}")
-    }
-
-    // --- BLOQUE SQLITE (TODO LO SOLICITADO) ---
-
-    /** * EXAMEN: VARIOS RECORDS (Insertar cada partida) */
-    private fun insertarEnSQLite(puntos: Int) {
+    private fun guardarEnSQLite() {
         viewModelScope.launch(Dispatchers.IO) {
             val db = dbHelper.writableDatabase
+            val fechaActual = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
             val values = ContentValues().apply {
-                put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, "Jugador_Examen")
-                put(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION, puntos)
-                put(PartidasContrato.PartidaEntry.COLUMN_FECHA, "03/02/2026")
+                put(PartidasContrato.PartidaEntry.COLUMN_NOMBRE, "Player_Examen")
+                put(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION, ronda)
+                put(PartidasContrato.PartidaEntry.COLUMN_FECHA, fechaActual)
             }
-            db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
-            Log.d("SQLITE", "Partida guardada correctamente")
-        }
-    }
 
-    /** * EXAMEN: getAll (Obtener historial completo) */
-    fun getAllPartidas() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val db = dbHelper.readableDatabase
-            val cursor = db.query(PartidasContrato.PartidaEntry.TABLE_NAME, null, null, null, null, null, null)
+            val newRowId = db.insert(PartidasContrato.PartidaEntry.TABLE_NAME, null, values)
+
+            val consultaTop10 = "SELECT id FROM ${PartidasContrato.PartidaEntry.TABLE_NAME} " +
+                    "ORDER BY ${PartidasContrato.PartidaEntry.COLUMN_PUNTUACION} DESC, " +
+                    "${PartidasContrato.PartidaEntry.COLUMN_FECHA} ASC LIMIT 10"
+
+            val cursor = db.rawQuery(consultaTop10, null)
+            val idsTop10 = mutableListOf<Long>()
+            var esTop10 = false
+
             while (cursor.moveToNext()) {
-                val pts = cursor.getInt(cursor.getColumnIndexOrThrow(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION))
-                Log.d("SQLITE", "Puntos en historial: $pts")
+                val id = cursor.getLong(0)
+                idsTop10.add(id)
+                if (id == newRowId) {
+                    esTop10 = true
+                }
             }
             cursor.close()
-        }
-    }
 
-    /** * EXAMEN: getMax (Obtener puntuación máxima con SQL puro) */
-    fun getMaxPuntuacion(): Int {
-        val db = dbHelper.readableDatabase
-        val cursor = db.rawQuery("SELECT MAX(${PartidasContrato.PartidaEntry.COLUMN_PUNTUACION}) FROM ${PartidasContrato.PartidaEntry.TABLE_NAME}", null)
-        var max = 0
-        if (cursor.moveToFirst()) {
-            max = cursor.getInt(0)
-        }
-        cursor.close()
-        Log.d("SQLITE", "Récord máximo encontrado: $max")
-        return max
-    }
-
-    /** * EXAMEN: getRecordById (Buscar registro específico) */
-    fun getRecordById(id: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val db = dbHelper.readableDatabase
-            val cursor = db.query(
-                PartidasContrato.PartidaEntry.TABLE_NAME,
-                null,
-                "id = ?",
-                arrayOf(id.toString()),
-                null, null, null
-            )
-            if (cursor.moveToFirst()) {
-                val p = cursor.getInt(cursor.getColumnIndexOrThrow(PartidasContrato.PartidaEntry.COLUMN_PUNTUACION))
-                Log.d("SQLITE", "Partida con ID $id tiene $p puntos")
+            if (esTop10) {
+                Log.d("SQLITE", "formas parte de los diez primeros")
             }
-            cursor.close()
+
+            val idsString = idsTop10.joinToString(",")
+            db.execSQL("DELETE FROM ${PartidasContrato.PartidaEntry.TABLE_NAME} WHERE id NOT IN ($idsString)")
+
+            actualizarRecordMaximoDesdeBD()
         }
     }
 }

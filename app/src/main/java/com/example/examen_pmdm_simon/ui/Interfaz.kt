@@ -18,22 +18,18 @@ fun PantallaSimon(viewModel: MyViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Cabecera de Récords
         Card(
             modifier = Modifier.padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.LightGray.copy(alpha = 0.2f))
+            colors = CardDefaults.cardColors(containerColor = Color.Blue.copy(alpha = 0.1f))
         ) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "TOP SCORE: ${viewModel.recordEnMemoria}", fontSize = 22.sp, color = Color.Black)
-                Text(text = "Fecha: ${viewModel.fechaRecord}", fontSize = 12.sp, color = Color.Gray)
+                Text(text = "RÉCORD MÁXIMO SQLITE: ${viewModel.recordMaximoSQLite}", fontSize = 18.sp, color = Color.Blue)
+                Text(text = "Puntos: ${viewModel.ronda}", fontSize = 32.sp)
             }
         }
 
-        Text(text = "Ronda: ${viewModel.ronda}", fontSize = 40.sp)
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Botones de colores
         Column {
             Row {
                 BotonColor(Colores.VERDE, viewModel)
@@ -45,16 +41,18 @@ fun PantallaSimon(viewModel: MyViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Estados y controles
         if (viewModel.estadoActual == EstadoJuego.GAME_OVER) {
-            Text(text = "¡GAME OVER!", color = Color.Red, fontSize = 24.sp)
+            Text(text = "¡FIN DEL JUEGO!", color = Color.Red, fontSize = 24.sp, modifier = Modifier.padding(8.dp))
         }
 
         if (viewModel.estadoActual == EstadoJuego.INICIO || viewModel.estadoActual == EstadoJuego.GAME_OVER) {
-            Button(onClick = { viewModel.iniciarJuego() }) {
-                Text(text = if (viewModel.estadoActual == EstadoJuego.INICIO) "JUGAR" else "REINTENTAR")
+            Button(
+                onClick = { viewModel.iniciarJuego() },
+                modifier = Modifier.width(200.dp)
+            ) {
+                Text(text = if (viewModel.estadoActual == EstadoJuego.INICIO) "EMPEZAR" else "REINTENTAR")
             }
         }
     }
@@ -62,8 +60,7 @@ fun PantallaSimon(viewModel: MyViewModel) {
 
 @Composable
 fun BotonColor(colorEnum: Colores, viewModel: MyViewModel) {
-    val alpha = if (viewModel.colorIluminado == colorEnum) 1f else 0.3f
-
+    val alpha = if (viewModel.colorIluminado == colorEnum) 1f else 0.4f
     Button(
         onClick = { viewModel.respuestaUsuario(colorEnum) },
         colors = ButtonDefaults.buttonColors(containerColor = colorEnum.colorReal.copy(alpha = alpha)),

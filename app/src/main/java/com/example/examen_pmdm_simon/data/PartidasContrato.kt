@@ -9,8 +9,5 @@ object PartidasContrato {
         const val COLUMN_PUNTUACION = "puntuacion"
         const val COLUMN_FECHA = "fecha"
 
-        /** * EXAMEN: Ejemplo de cómo añadir una columna extra si lo piden
-         * const val COLUMN_NIVEL = "nivel"
-         */
     }
 }
